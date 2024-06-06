@@ -1,0 +1,71 @@
+version: '3.9'  # docker-composeのバージョンを指定します。バージョン3.9を使用しています。
+
+services:  # サービスの定義を開始します。
+
+  # バックエンド
+  backend:
+    container_name: sample_backend  # コンテナの名前を'sample_backend'に設定します。
+    build:  # イメージをビルドするための設定です。
+      context: .  # 1．backendのコンテナなのだから、backendの情報だけビルドコンテキストとして指定すればいいのでは？
+      dockerfile: ./backend/Dockerfile  # Dockerfileの場所を指定します。
+    env_file:
+      - ./.env  # 環境変数を定義した.envファイルを読み込みます。
+      #次ここの下から
+    tty: true  # コンテナに疑似ターミナルを割り当てます。execで入って、環境構築済みのコンテナに入っていじる。
+    stdin_open: true  # 標準入力をオープンにします。エラーが出た時の処理を表示（dockerファイルのログに出てくる）
+    volumes:
+      - type: bind  # ボリュームのタイプをバインドに設定します。
+        source: .  # ホストのディレクトリを指定します。
+        target: /backend  # コンテナ内のマウントポイントを指定します。
+    ports:
+      - ${HOST_SERVER_PORTS}:${CONTAINER_SERVER_PORTS}  # ホストとコンテナのポートマッピングを環境変数で指定します。
+    depends_on:
+      - database  # このサービスは'database'サービスに依存します。データベースを先に作成。先にデータベースがないと、バックエンドでデータベースを使用するときにエラーになるから。
+
+#depends onやvolumes、portは2択で、build穴埋め
+
+  # フロントエンド
+  frontend:
+    container_name: sample_frontend  # コンテナの名前を'sample_frontend'に設定します。
+    build:  # イメージをビルドするための設定です。
+      context: .  # ビルドコンテキストとしてカレントディレクトリを指定します。
+      dockerfile: ./frontend/Dockerfile  # Dockerfileの場所を指定します。
+    env_file:
+      - ./.env  # 環境変数を定義した.envファイルを読み込みます。
+    tty: true  # コンテナに疑似ターミナルを割り当てます。
+    stdin_open: true  # 標準入力をオープンにします。
+    volumes:
+      - type: bind  # ボリュームのタイプをバインドに設定します。
+        source: ./frontend  # ホストのディレクトリを指定します。
+        target: /usr/src/app  # コンテナ内のマウントポイントを指定します。
+    command: sh -c "yarn install &&PORT=3030 yarn start"  # コンテナ起動時に実行するコマンドを指定します。
+    ports:
+      - ${HOST_FRONT_PORTS}:${CONTAINER_FRONT_PORTS}  # ホストとコンテナのポートマッピングを環境変数で指定します。
+    depends_on:
+      - database  # このサービスは'database'サービスに依存します。
+
+  #穴埋めcommandするかどうか
+  
+  #dockerイメージ（パッケージ入れるやつ）、コンテナ（実行環境）、ホストマシン（自分のPC、ローカル）の関係
+
+  # データベース
+  database:
+    image: mysql:8.3  # 使用するMySQLのイメージとバージョンを指定します。
+    container_name: mysql  # コンテナの名前を'mysql'に設定します。
+    env_file:
+      - .env  # 環境変数を定義した.envファイルを読み込みます。
+    environment:  # 環境変数を直接設定します。
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}  # MySQLのrootパスワードを環境変数で指定します。
+      MYSQL_DATABASE: ${MYSQL_DATABASE}  # 作成するデータベース名を環境変数で指定します。
+      MYSQL_USER: ${MYSQL_USER}  # MySQLのユーザー名を環境変数で指定します。
+      MYSQL_USER_PASSWORD: ${MYSQL_PASSWORD}  # MySQLのユーザーパスワードを環境変数で指定します。
+      TZ: ${MYSQL_TZ}  # タイムゾーンを環境変数で指定します。
+    tty: true  # コンテナに疑似ターミナルを割り当てます。
+    stdin_open: true  # 標準入力をオープンにします。
+    volumes:
+      - ./database/data:/var/lib/mysql  # ホストのディレクトリをMySQLのデータディレクトリにマウントします。
+      - ./database/my.cnf:/etc/mysql/conf.d/my.cnf  # ホストのmy.cnfファイルをMySQLの設定ファイルディレクトリにマウントします。
+      - ./database/sqls:/docker-entrypoint-initdb.d  # ホストのSQLスクリプトディレクトリを初期化用ディレクトリにマウントします。
+    #docker-entrypoint-initdb.dは最初の実行のみ動くやつ
+    ports:
+      - ${HOST_DATABASE_PORTS}:${CONTAINER_DATABASE_PORTS}  # ホストとコンテナのポートマッピングを環境変数で指定します。
