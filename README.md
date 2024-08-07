@@ -35,12 +35,3 @@ Dockerは、アプリケーションをコンテナとしてパッケージ化�
 4. **ベストプラクティス**
    - Dockerを使用する場面
    - 従来の仮想化が好ましいシナリオ
-
-## ハンズオン演習
-
-このセッションでは、簡単なFlaskアプリケーションを作成し、Docker Composeを使ってコンテナ化します。以下の手順に従って環境を設定してください。
-
-### 前提条件
-
-- [Docker](https://www.docker.com/get-started)をインストール
-- [Docker Compose](https://docs.docker.com/compose/install/)をインストール
